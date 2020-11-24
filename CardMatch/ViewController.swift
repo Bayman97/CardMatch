@@ -11,9 +11,13 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
 
     // reference to the collection view 
     @IBOutlet weak var collectionView: UICollectionView!
-
+    @IBOutlet weak var timerLabel: UILabel!
+    
     let model = CardModel()
     var cardsArray = [Card]()
+
+    var timer:Timer?
+    var milliseconds:Int = 20 * 1000
 
     // if no card is selected, then value = NIL
     var firstFlippedCardIndex:IndexPath?
@@ -27,8 +31,37 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         // set view controller as datasource and delegate of the collection view
         collectionView.dataSource = self
         collectionView.delegate = self
+
+        // initialize timer
+        timer = Timer.scheduledTimer(timeInterval: 0.001, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
+        RunLoop.main.add(timer!, forMode: .common)
     }
 
+    // MARK: - Timer Methods
+
+    // objective c internals -> allows swift to utilize objective c
+    @objc func timerFired() {
+
+        // decrement the counter
+        milliseconds = milliseconds - 1
+
+        // update the label
+        let seconds:Double = Double(milliseconds)/1000.0
+        timerLabel.text = String(format: "Time Remaining: %.2f", seconds)
+
+        // stop timer if it reaches 0
+        if milliseconds == 0 {
+
+            timerLabel.textColor = UIColor.red
+            timer?.invalidate()
+
+            // check if the user has cleared all the pairs
+            checkForGameEnd()
+        }
+
+
+
+    }
 
     // MARK: - Collection View Delegate Methods
 
@@ -112,6 +145,9 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
             // optional chaining ("?") if they are nil, then no methods are called
             cardOneCell?.remove()
             cardTwoCell?.remove()
+
+            // was that the last pair?
+            checkForGameEnd()
         }
         else {
 
@@ -128,6 +164,48 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
 
         // reset firstFlippedCardIndex property
         firstFlippedCardIndex = nil
+    }
+
+    func checkForGameEnd() {
+
+        // check if any cards are unmatched
+        var hasWon = true
+
+        for card in cardsArray {
+
+            if card.isMatched == false {
+
+                hasWon = false
+                break
+            }
+        }
+
+        if hasWon == true {
+
+            // user has won, show an alert
+            showAlert(title: "Congratulations!", message: "You've won the game!")
+
+        }
+        else {
+
+            // user hasn't won, check if there is any time left
+            if milliseconds <= 0 {
+
+                showAlert(title: "Time's up", message: "Sorry, better luck next time")
+            }
+
+        }
+    }
+
+    func showAlert(title: String, message: String) {
+
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+        // add a button to dismiss the alert
+        let okAction = UIAlertAction(title: "Ok", style: .default, handler: nil)
+        alert.addAction(okAction)
+
+        present(alert, animated: true, completion: nil)
     }
 }
 
