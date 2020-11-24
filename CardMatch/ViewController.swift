@@ -22,6 +22,8 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     // if no card is selected, then value = NIL
     var firstFlippedCardIndex:IndexPath?
 
+    var soundPlayer = SoundManager()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
@@ -35,6 +37,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         // initialize timer
         timer = Timer.scheduledTimer(timeInterval: 0.001, target: self, selector: #selector(timerFired), userInfo: nil, repeats: true)
         RunLoop.main.add(timer!, forMode: .common)
+
     }
 
     // MARK: - Timer Methods
@@ -54,14 +57,19 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
 
             timerLabel.textColor = UIColor.red
             timer?.invalidate()
-
             // check if the user has cleared all the pairs
             checkForGameEnd()
         }
-
-
-
     }
+
+    // called when cards start loading on the screen
+    override func viewDidDisappear(_ animated: Bool) {
+
+        // play shuffle sound
+        soundPlayer.playSound(effect: .shuffle)
+    }
+
+
 
     // MARK: - Collection View Delegate Methods
 
@@ -85,6 +93,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         return cell
     }
 
+
     // called right before cell is displayed
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
 
@@ -95,8 +104,15 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         // configure the cell
         cardCell?.configureCell(card: cardsArray[indexPath.row])
     }
+
+
     // index path indicates which cell the user selected
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+
+        // stop user interaction if there is no time left on the timer
+        if milliseconds <= 0 {
+            return
+        }
 
         // get a reference to the cell that was tapped
         let cell = collectionView.cellForItem(at: indexPath) as? CardCollectionViewCell
@@ -105,6 +121,9 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
 
             // flip the card up
             cell?.flipUP()
+
+            // play sound
+            soundPlayer.playSound(effect: .flip)
 
             // check if this is first or second card flipped
             if firstFlippedCardIndex == nil {
@@ -122,7 +141,9 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         }
     }
 
+
     // MARK: - Game Logic Methods
+
 
     func checkForMatch(_ secondFlippedCardIndex:IndexPath) {
 
@@ -138,6 +159,10 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         if cardOne.imageName == cardTwo.imageName {
 
             // match
+
+            // play match sound
+            soundPlayer.playSound(effect: .match)
+
             // set status and remove cards
             cardOne.isMatched = true
             cardTwo.isMatched = true
@@ -150,8 +175,10 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
             checkForGameEnd()
         }
         else {
-
             // no match
+
+            // play no match sound
+            soundPlayer.playSound(effect: .noMatch)
 
             cardOne.isFlipped = false
             cardTwo.isFlipped = false
@@ -161,7 +188,6 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
             cardTwoCell?.flipDown()
 
         }
-
         // reset firstFlippedCardIndex property
         firstFlippedCardIndex = nil
     }
@@ -172,7 +198,6 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         var hasWon = true
 
         for card in cardsArray {
-
             if card.isMatched == false {
 
                 hasWon = false
@@ -181,19 +206,16 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         }
 
         if hasWon == true {
-
             // user has won, show an alert
             showAlert(title: "Congratulations!", message: "You've won the game!")
 
         }
         else {
-
             // user hasn't won, check if there is any time left
             if milliseconds <= 0 {
 
                 showAlert(title: "Time's up", message: "Sorry, better luck next time")
             }
-
         }
     }
 
